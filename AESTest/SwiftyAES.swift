@@ -29,11 +29,7 @@ public enum SwiftyAES {
         // 使用指定的 IV 进行加密
         let iv = Data.randomBytes(count: ivSize)
         let sealedBox = try AES.GCM.seal(data, using: key, nonce: AES.GCM.Nonce(data: iv))
-        var combinedData = Data()
-        combinedData.append(iv)
-        combinedData.append(sealedBox.ciphertext)
-        combinedData.append(sealedBox.tag)
-        return combinedData
+        return sealedBox.combined!
     }
     
     public static func encrypt(data: Data, key: String) throws -> Data {
@@ -49,26 +45,9 @@ public enum SwiftyAES {
     }
     
     public static func decrypt(encryptedData: Data, key: SymmetricKey) throws -> Data {
-        // 假设加密数据格式为：Nonce | Ciphertext | Tag
-        let nonceLength = ivSize // AES-GCM 推荐的 IV 长度为 12 字节
-        let tagLength = 16 // AES-GCM 的 Tag 长度为 16 字节
-        
-        // 提取 IV
-        let nonceData = encryptedData.prefix(nonceLength)
-        guard let nonce = try? AES.GCM.Nonce(data: nonceData) else {
-            throw NSError(domain: "Invalid nonce", code: 1, userInfo: nil)
-        }
-        
-        // 提取 Tag
-        let tagData = encryptedData.suffix(tagLength)
-        
-        // 提取 Ciphertext
-        let ciphertextData = encryptedData.dropFirst(nonceLength).dropLast(tagLength)
-        
         // 创建 SealedBox 并解密
-        let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: ciphertextData, tag: tagData)
+        let sealedBox = try AES.GCM.SealedBox(combined: encryptedData)
         let decryptedData = try AES.GCM.open(sealedBox, using: key)
-        
         return decryptedData
     }
 }
